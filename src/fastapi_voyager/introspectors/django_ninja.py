@@ -97,27 +97,18 @@ class DjangoNinjaIntrospector(AppIntrospector):
         """
         Extract the response model from the operation.
 
+        Django Ninja infers response model from function's return type annotation.
+
         Args:
             operation: The Django Ninja operation object
 
         Returns:
-            The response model class
+            The response model class, or type(None) if not found
         """
-        from ninja.constants import NOT_SET_TYPE
-
-        # Django Ninja infers response model from function's return type annotation
-        # Try to get it from the view function's annotations first
+        # Django Ninja uses type hints for response models
+        # The response_models field is always NOT_SET_TYPE, so we only check __annotations__
         if hasattr(operation.view_func, "__annotations__") and "return" in operation.view_func.__annotations__:
             return operation.view_func.__annotations__["return"]
 
-        # Fallback to checking response_models (if explicitly set)
-        if hasattr(operation, "response_models"):
-            # Get the 200 response model, or the first one
-            for status_code in [200, "200", "2xx"]:
-                if status_code in operation.response_models:
-                    model = operation.response_models[status_code]
-                    if model is not NOT_SET_TYPE:
-                        return model
-
-        # Return None if no response model found
+        # No response model found
         return type(None)  # type: ignore
