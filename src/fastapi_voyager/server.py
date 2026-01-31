@@ -9,6 +9,7 @@ from typing import Any, Literal
 from pydantic_resolve import ErDiagram
 
 from fastapi_voyager.adapters import DjangoNinjaAdapter, FastAPIAdapter, LitestarAdapter
+from fastapi_voyager.introspectors import FrameworkType, detect_framework
 
 INITIAL_PAGE_POLICY = Literal["first", "full", "empty"]
 
@@ -48,69 +49,50 @@ def _get_adapter(
     Raises:
         TypeError: If the app type is not supported
     """
-    # Get the class name for type checking
-    app_class_name = type(target_app).__name__
+    # Use centralized framework detection from introspectors
+    framework = detect_framework(target_app)
 
-    # Try FastAPI
-    try:
-        from fastapi import FastAPI
+    if framework == FrameworkType.FASTAPI:
+        return FastAPIAdapter(
+            target_app=target_app,
+            module_color=module_color,
+            gzip_minimum_size=gzip_minimum_size,
+            module_prefix=module_prefix,
+            swagger_url=swagger_url,
+            online_repo_url=online_repo_url,
+            initial_page_policy=initial_page_policy,
+            ga_id=ga_id,
+            er_diagram=er_diagram,
+            enable_pydantic_resolve_meta=enable_pydantic_resolve_meta,
+        )
 
-        if isinstance(target_app, FastAPI):
-            return FastAPIAdapter(
-                target_app=target_app,
-                module_color=module_color,
-                gzip_minimum_size=gzip_minimum_size,
-                module_prefix=module_prefix,
-                swagger_url=swagger_url,
-                online_repo_url=online_repo_url,
-                initial_page_policy=initial_page_policy,
-                ga_id=ga_id,
-                er_diagram=er_diagram,
-                enable_pydantic_resolve_meta=enable_pydantic_resolve_meta,
-            )
-    except (ImportError, Exception):
-        pass
+    elif framework == FrameworkType.LITESTAR:
+        return LitestarAdapter(
+            target_app=target_app,
+            module_color=module_color,
+            gzip_minimum_size=gzip_minimum_size,
+            module_prefix=module_prefix,
+            swagger_url=swagger_url,
+            online_repo_url=online_repo_url,
+            initial_page_policy=initial_page_policy,
+            ga_id=ga_id,
+            er_diagram=er_diagram,
+            enable_pydantic_resolve_meta=enable_pydantic_resolve_meta,
+        )
 
-    # Try Litestar (check before Django Ninja to avoid Django import issues)
-    try:
-        from litestar import Litestar
-
-        if isinstance(target_app, Litestar):
-            return LitestarAdapter(
-                target_app=target_app,
-                module_color=module_color,
-                gzip_minimum_size=gzip_minimum_size,
-                module_prefix=module_prefix,
-                swagger_url=swagger_url,
-                online_repo_url=online_repo_url,
-                initial_page_policy=initial_page_policy,
-                ga_id=ga_id,
-                er_diagram=er_diagram,
-                enable_pydantic_resolve_meta=enable_pydantic_resolve_meta,
-            )
-    except (ImportError, Exception):
-        pass
-
-    # Try Django Ninja (check by class name first to avoid import if not needed)
-    try:
-        if app_class_name == "NinjaAPI":
-            from ninja import NinjaAPI
-
-            if isinstance(target_app, NinjaAPI):
-                return DjangoNinjaAdapter(
-                    target_app=target_app,
-                    module_color=module_color,
-                    gzip_minimum_size=gzip_minimum_size,  # Note: ignored for Django
-                    module_prefix=module_prefix,
-                    swagger_url=swagger_url,
-                    online_repo_url=online_repo_url,
-                    initial_page_policy=initial_page_policy,
-                    ga_id=ga_id,
-                    er_diagram=er_diagram,
-                    enable_pydantic_resolve_meta=enable_pydantic_resolve_meta,
-                )
-    except (ImportError, Exception):
-        pass
+    elif framework == FrameworkType.DJANGO_NINJA:
+        return DjangoNinjaAdapter(
+            target_app=target_app,
+            module_color=module_color,
+            gzip_minimum_size=gzip_minimum_size,  # Note: ignored for Django
+            module_prefix=module_prefix,
+            swagger_url=swagger_url,
+            online_repo_url=online_repo_url,
+            initial_page_policy=initial_page_policy,
+            ga_id=ga_id,
+            er_diagram=er_diagram,
+            enable_pydantic_resolve_meta=enable_pydantic_resolve_meta,
+        )
 
     # If we get here, the app type is not supported
     raise TypeError(

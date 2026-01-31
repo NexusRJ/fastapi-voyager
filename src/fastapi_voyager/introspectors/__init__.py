@@ -4,6 +4,7 @@ Introspectors for different web frameworks.
 This package contains built-in introspector implementations for various frameworks.
 """
 from .base import AppIntrospector, RouteInfo
+from .detector import FrameworkType, detect_framework, get_introspector
 
 # Try to import each introspector, but don't fail if the framework isn't installed
 try:
@@ -27,4 +28,7 @@ __all__ = [
     "FastAPIIntrospector",
     "DjangoNinjaIntrospector",
     "LitestarIntrospector",
+    "FrameworkType",
+    "detect_framework",
+    "get_introspector",
 ]

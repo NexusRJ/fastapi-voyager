@@ -73,51 +73,9 @@ class Voyager:
         Raises:
             TypeError: If the app type is not supported
         """
-        # If it's already an introspector, return it
-        if isinstance(app, AppIntrospector):
-            return app
+        from fastapi_voyager.introspectors import get_introspector
 
-        # Get the class name for type checking
-        app_class_name = type(app).__name__
-
-        # Try FastAPI
-        try:
-            from fastapi import FastAPI
-            from fastapi_voyager.introspectors import FastAPIIntrospector
-
-            if FastAPIIntrospector and isinstance(app, FastAPI):
-                return FastAPIIntrospector(app)
-        except (ImportError, Exception):
-            pass
-
-        # Try Litestar (check before Django Ninja to avoid Django import issues)
-        try:
-            from litestar import Litestar
-            from fastapi_voyager.introspectors import LitestarIntrospector
-
-            if LitestarIntrospector and isinstance(app, Litestar):
-                return LitestarIntrospector(app)
-        except (ImportError, Exception):
-            pass
-
-        # Try Django Ninja (check by class name first to avoid import if not needed)
-        try:
-            if app_class_name == "NinjaAPI":
-                from ninja import NinjaAPI
-                from fastapi_voyager.introspectors import DjangoNinjaIntrospector
-
-                if DjangoNinjaIntrospector and isinstance(app, NinjaAPI):
-                    return DjangoNinjaIntrospector(app)
-        except (ImportError, Exception):
-            pass
-
-        # If we get here, the app type is not supported
-        raise TypeError(
-            f"Unsupported app type: {type(app).__name__}. "
-            f"Supported types: FastAPI, Django Ninja API, Litestar, or any AppIntrospector implementation. "
-            f"If you're using a different framework, please implement AppIntrospector for that framework. "
-            f"See ADAPTER_EXAMPLE.md for instructions."
-        )
+        return get_introspector(app)
 
     def analysis(self, app):
         """
