@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from starlette.middleware.gzip import GZipMiddleware
 
 from fastapi_voyager.adapters.base import VoyagerAdapter
-from fastapi_voyager.adapters.common import VoyagerContext
+from fastapi_voyager.adapters.common import STATIC_FILES_PATH, VoyagerContext
 from fastapi_voyager.type import CoreData, SchemaNode, Tag
 
 
@@ -155,7 +155,7 @@ class FastAPIAdapter(VoyagerAdapter):
 
         from fastapi_voyager.adapters.common import WEB_DIR
 
-        app.mount("/fastapi-voyager-static", StaticFiles(directory=str(WEB_DIR)), name="static")
+        app.mount(STATIC_FILES_PATH, StaticFiles(directory=str(WEB_DIR)), name="static")
         app.include_router(router)
 
         return app

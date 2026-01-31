@@ -18,8 +18,11 @@ from fastapi_voyager.voyager import Voyager
 WEB_DIR = Path(__file__).parent.parent / "web"
 WEB_DIR.mkdir(exist_ok=True)
 
+STATIC_FILES_PATH = "/fastapi-voyager-static"
+
 GA_PLACEHOLDER = "<!-- GA_SNIPPET -->"
 VERSION_PLACEHOLDER = "<!-- VERSION_PLACEHOLDER -->"
+STATIC_PATH_PLACEHOLDER = "<!-- STATIC_PATH -->"
 
 
 def build_ga_snippet(ga_id: str | None) -> str:
@@ -198,6 +201,8 @@ class VoyagerContext:
             content = index_file.read_text(encoding="utf-8")
             content = content.replace(GA_PLACEHOLDER, build_ga_snippet(self.ga_id))
             content = content.replace(VERSION_PLACEHOLDER, f"?v={__version__}")
+            # Replace static files path placeholder with actual path (without leading slash)
+            content = content.replace(STATIC_PATH_PLACEHOLDER, STATIC_FILES_PATH.lstrip("/"))
             return content
         # fallback simple page if index.html missing
         return """

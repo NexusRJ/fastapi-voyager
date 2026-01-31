@@ -6,10 +6,10 @@ This module provides the Litestar-specific implementation of the voyager server.
 from typing import Any
 
 from litestar import Litestar, MediaType, Request, Response, get, post
-from litestar.static_files import StaticFilesConfig
+from litestar.static_files import create_static_files_router
 
 from fastapi_voyager.adapters.base import VoyagerAdapter
-from fastapi_voyager.adapters.common import WEB_DIR, VoyagerContext
+from fastapi_voyager.adapters.common import STATIC_FILES_PATH, WEB_DIR, VoyagerContext
 from fastapi_voyager.type import CoreData, SchemaNode, Tag
 
 
@@ -124,6 +124,12 @@ class LitestarAdapter(VoyagerAdapter):
                 media_type=MediaType.JSON,
             )
 
+        # Create static files router using the new API (replaces deprecated StaticFilesConfig)
+        static_files_router = create_static_files_router(
+            path=STATIC_FILES_PATH,
+            directories=[str(WEB_DIR)],
+        )
+
         # Create Litestar app
         app = Litestar(
             route_handlers=[
@@ -136,9 +142,7 @@ class LitestarAdapter(VoyagerAdapter):
                 index,
                 get_object_by_module_name,
                 get_vscode_link_by_module_name,
-            ],
-            static_files_config=[
-                StaticFilesConfig(path="/fastapi-voyager-static", directories=[str(WEB_DIR)])
+                static_files_router,
             ],
         )
 

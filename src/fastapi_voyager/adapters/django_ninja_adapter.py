@@ -9,7 +9,7 @@ import mimetypes
 from typing import Any
 
 from fastapi_voyager.adapters.base import VoyagerAdapter
-from fastapi_voyager.adapters.common import WEB_DIR, VoyagerContext
+from fastapi_voyager.adapters.common import STATIC_FILES_PATH, WEB_DIR, VoyagerContext
 from fastapi_voyager.type import CoreData, SchemaNode, Tag
 
 
@@ -62,7 +62,7 @@ class DjangoNinjaAdapter(VoyagerAdapter):
                 path = "/"
 
         # Handle static files
-        if method == "GET" and path.startswith("/fastapi-voyager-static/"):
+        if method == "GET" and path.startswith(f"{STATIC_FILES_PATH}/"):
             await self._handle_static_file(path, send)
             return
 
@@ -106,9 +106,10 @@ class DjangoNinjaAdapter(VoyagerAdapter):
             await self._send_json({"error": str(e)}, send, status_code=400)
 
     async def _handle_static_file(self, path: str, send):
-        """Handle GET /fastapi-voyager-static/* - serve static files."""
+        """Handle GET {STATIC_FILES_PATH}/* - serve static files."""
         # Remove /fastapi-voyager-static/ prefix
-        file_path = path[len("/fastapi-voyager-static/"):]
+        prefix = f"{STATIC_FILES_PATH}/"
+        file_path = path[len(prefix):]
         full_path = WEB_DIR / file_path
 
         # Security check: ensure the path is within WEB_DIR
