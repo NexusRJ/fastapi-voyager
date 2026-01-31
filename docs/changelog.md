@@ -177,7 +177,7 @@
     - [x] enhance the selected and unselected node & edges
 
 ## 0.16
-- 0.16.0alpha
+- 0.16.0alpha-1
     - [x] support django ninja and litestar
 
 ## 0.17, enhance er diagram
