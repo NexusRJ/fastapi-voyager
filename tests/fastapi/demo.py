@@ -14,7 +14,7 @@ diagram = BaseEntity.get_diagram()
 app = FastAPI(title="Demo API", description="A demo FastAPI application for router visualization")
 
 @app.get("/sprints", tags=['for-restapi', 'group_a'], response_model=list[Sprint])
-def get_sprint():
+def get_sprints():
     return []
 
 class PageMember(Member):
