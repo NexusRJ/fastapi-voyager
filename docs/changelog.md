@@ -181,6 +181,8 @@
     - [x] support django ninja and litestar
 - 0.16.0alpha-2
     - [x] fix import error
+- 0.16.0alpha-3
+    - [x] fix voyager cli, add web parameter
 
 ## 0.17, enhance er diagram
 - 0.17.0

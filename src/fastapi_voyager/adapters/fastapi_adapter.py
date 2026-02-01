@@ -79,6 +79,7 @@ class FastAPIAdapter(VoyagerAdapter):
         ga_id: str | None = None,
         er_diagram: Any = None,
         enable_pydantic_resolve_meta: bool = False,
+        server_mode: bool = False,
     ):
         self.ctx = VoyagerContext(
             target_app=target_app,
@@ -93,6 +94,8 @@ class FastAPIAdapter(VoyagerAdapter):
             framework_name="FastAPI",
         )
         self.gzip_minimum_size = gzip_minimum_size
+        # Note: server_mode is accepted for API consistency but not used
+        # since FastAPI apps are always standalone with routes at /
 
     def create_app(self) -> Any:
         """Create and return a FastAPI application with voyager endpoints."""
@@ -161,7 +164,3 @@ class FastAPIAdapter(VoyagerAdapter):
         app.include_router(router)
 
         return app
-
-    def get_mount_path(self) -> str:
-        """Get the recommended mount path for voyager."""
-        return "/voyager"

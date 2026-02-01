@@ -29,6 +29,7 @@ class LitestarAdapter(VoyagerAdapter):
         ga_id: str | None = None,
         er_diagram: Any = None,
         enable_pydantic_resolve_meta: bool = False,
+        server_mode: bool = False,
     ):
         self.ctx = VoyagerContext(
             target_app=target_app,
@@ -43,6 +44,8 @@ class LitestarAdapter(VoyagerAdapter):
             framework_name="Litestar",
         )
         self.gzip_minimum_size = gzip_minimum_size
+        # Note: server_mode is accepted for API consistency but not used
+        # since Litestar apps are always standalone with routes at /
 
     def create_app(self) -> Any:
         """Create and return a Litestar application with voyager endpoints."""
@@ -182,7 +185,3 @@ class LitestarAdapter(VoyagerAdapter):
                 for f in schema.fields
             ],
         }
-
-    def get_mount_path(self) -> str:
-        """Get the recommended mount path for voyager."""
-        return "/voyager"

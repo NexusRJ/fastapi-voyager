@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Annotated, Generic, TypeVar
 
-from litestar import Controller, get
+from litestar import Controller, Litestar, get
 from pydantic import BaseModel, Field
 from pydantic_resolve import Collector, DefineSubset, ExposeAs, Resolver, SendTo
 
@@ -130,3 +130,9 @@ class DemoController(Controller):
     @get("/page_test_5/", tags=['long_long_long_tag_name', 'group_b'], sync_to_thread=False)
     def get_page_test_3_no_response_model_long_long_long_name(self) -> bool:
         return True
+
+
+# Create a Litestar app instance - this is the main app that can be run directly
+app = Litestar(
+    route_handlers=[DemoController]
+)

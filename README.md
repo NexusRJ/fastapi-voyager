@@ -268,8 +268,14 @@ Set `enable_pydantic_resolve_meta=True` in `create_voyager`, then toggle the "py
 ### Start Server
 
 ```bash
-# Open in browser (default port 8000)
-voyager -m tests.demo --server
+# FastAPI
+voyager -m tests.demo --server --web fastapi
+
+# Django Ninja
+voyager -m tests.demo --server --web django-ninja
+
+# Litestar
+voyager -m tests.demo --server --web litestar
 
 # Custom port
 voyager -m tests.demo --server --port=8002

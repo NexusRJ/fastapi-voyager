@@ -32,6 +32,7 @@ class DjangoNinjaAdapter(VoyagerAdapter):
         ga_id: str | None = None,
         er_diagram: Any = None,
         enable_pydantic_resolve_meta: bool = False,
+        server_mode: bool = False,
     ):
         self.ctx = VoyagerContext(
             target_app=target_app,
@@ -45,6 +46,7 @@ class DjangoNinjaAdapter(VoyagerAdapter):
             enable_pydantic_resolve_meta=enable_pydantic_resolve_meta,
             framework_name="Django Ninja",
         )
+        self.server_mode = server_mode
         # Note: gzip should be handled by Django's middleware, not here
 
     async def _handle_request(self, scope, receive, send):
@@ -55,8 +57,8 @@ class DjangoNinjaAdapter(VoyagerAdapter):
         # Parse the request
         method = scope["method"]
         path = scope["path"]
-        # Remove /voyager prefix for internal routing
-        if path.startswith("/voyager"):
+        # Remove /voyager prefix for internal routing (unless in server_mode)
+        if not self.server_mode and path.startswith("/voyager"):
             path = path[8:]  # Remove '/voyager'
             if path == "":
                 path = "/"
@@ -284,16 +286,15 @@ class DjangoNinjaAdapter(VoyagerAdapter):
         """Create and return an ASGI application."""
 
         async def asgi_app(scope, receive, send):
-            # Route /voyager/* to voyager handler
-            if scope["type"] == "http" and scope["path"].startswith("/voyager"):
-                await self._handle_request(scope, receive, send)
+            # In server_mode, handle all paths; otherwise only handle /voyager/*
+            if scope["type"] == "http":
+                if self.server_mode or scope["path"].startswith("/voyager"):
+                    await self._handle_request(scope, receive, send)
+                else:
+                    # Return 404 for non-voyager paths
+                    # (Django should handle these before they reach here)
+                    await self._send_404(send)
             else:
-                # Return 404 for non-voyager paths
-                # (Django should handle these before they reach here)
                 await self._send_404(send)
 
         return asgi_app
-
-    def get_mount_path(self) -> str:
-        """Get the recommended mount path for voyager."""
-        return "/voyager"

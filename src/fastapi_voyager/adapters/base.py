@@ -32,13 +32,3 @@ class VoyagerAdapter(ABC):
             A framework-specific application object
         """
         pass
-
-    @abstractmethod
-    def get_mount_path(self) -> str:
-        """
-        Get the recommended mount path for the voyager UI.
-
-        Returns:
-            The path where voyager should be mounted (e.g., "/voyager")
-        """
-        pass

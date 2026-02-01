@@ -25,6 +25,7 @@ def _get_adapter(
     ga_id: str | None = None,
     er_diagram: ErDiagram | None = None,
     enable_pydantic_resolve_meta: bool = False,
+    server_mode: bool = False,
 ) -> Any:
     """
     Get the appropriate adapter for the given target app.
@@ -64,6 +65,7 @@ def _get_adapter(
             ga_id=ga_id,
             er_diagram=er_diagram,
             enable_pydantic_resolve_meta=enable_pydantic_resolve_meta,
+            server_mode=server_mode,
         )
 
     elif framework == FrameworkType.LITESTAR:
@@ -78,6 +80,7 @@ def _get_adapter(
             ga_id=ga_id,
             er_diagram=er_diagram,
             enable_pydantic_resolve_meta=enable_pydantic_resolve_meta,
+            server_mode=server_mode,
         )
 
     elif framework == FrameworkType.DJANGO_NINJA:
@@ -92,6 +95,7 @@ def _get_adapter(
             ga_id=ga_id,
             er_diagram=er_diagram,
             enable_pydantic_resolve_meta=enable_pydantic_resolve_meta,
+            server_mode=server_mode,
         )
 
     # If we get here, the app type is not supported
@@ -114,6 +118,7 @@ def create_voyager(
     ga_id: str | None = None,
     er_diagram: ErDiagram | None = None,
     enable_pydantic_resolve_meta: bool = False,
+    server_mode: bool = False,
 ) -> Any:
     """
     Create a voyager UI application for the given target app.
@@ -136,6 +141,7 @@ def create_voyager(
         ga_id: Optional Google Analytics tracking ID
         er_diagram: Optional ER diagram from pydantic-resolve
         enable_pydantic_resolve_meta: Enable display of pydantic-resolve metadata
+        server_mode: If True, serve voyager UI at root path (for standalone preview mode)
 
     Returns:
         A framework-specific application object that provides the voyager UI
@@ -176,6 +182,7 @@ def create_voyager(
         ga_id=ga_id,
         er_diagram=er_diagram,
         enable_pydantic_resolve_meta=enable_pydantic_resolve_meta,
+        server_mode=server_mode,
     )
 
     return adapter.create_app()

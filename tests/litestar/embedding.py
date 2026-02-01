@@ -3,14 +3,8 @@ Litestar embedding example for fastapi-voyager.
 
 This module demonstrates how to integrate voyager with a Litestar application.
 """
-from litestar import Litestar, MediaType, Router, get
-from litestar.response import Response
-
 from fastapi_voyager import create_voyager
-from tests.litestar.demo import DemoController, diagram
-
-# Create a basic Litestar app with the demo controller
-app = Litestar(route_handlers=[DemoController])
+from tests.litestar.demo import app, diagram
 
 # Create voyager app for visualization
 # Note: create_voyager automatically detects Litestar and returns a Litestar app
@@ -26,50 +20,22 @@ voyager_app = create_voyager(
     enable_pydantic_resolve_meta=True
 )
 
-
-# Create a wrapper app that includes both the main app and voyager
-# Since Litestar doesn't have a built-in mount like FastAPI,
-# we create a custom router to handle voyager paths
-
-@get("/voyager/{path:path}", include_in_schema=False)
-async def voyager_proxy(path: str) -> Response:
-    """
-    Proxy voyager requests to the voyager app.
-
-    This is a simple implementation that forwards all requests.
-    For production, you might want to use a more sophisticated routing solution.
-    """
-    # Create a minimal scope for the voyager app
-    # Note: This is a simplified version - for production use, you'd want to
-    # properly handle the ASGI scope and forwarding
-    return Response(
-        content="To use voyager with Litestar, access the voyager app directly or implement proper ASGI forwarding",
-        status_code=200,
-        media_type=MediaType.TEXT,
-    )
-
-
-# For testing purposes, you can run the voyager app directly:
-# uvicorn tests.litestar.embedding:voyager_app --reload
-#
-# For a complete integration, you would need to implement proper ASGI middleware
-# or use Litestar's middleware system to forward requests to the voyager app
-
-
-# Alternative: Direct ASGI integration
-# ===================================
-# If you want to run both apps together, you can create an ASGI middleware:
-
+# ASGI app that routes between main app and voyager
+# This allows voyager to be accessed at /voyager while the main app handles other routes
 async def asgi_app(scope, receive, send):
     """
     ASGI app that routes between main app and voyager.
 
     Usage:
         uvicorn tests.litestar.embedding:asgi_app --reload
+
+    Then access:
+        - http://localhost:8000/demo/* for the main app
+        - http://localhost:8000/voyager for voyager UI
     """
     if scope["type"] == "http" and scope["path"].startswith("/voyager"):
         # Forward to voyager app
-        # Remove /voyager prefix for the voyager app
+        # Remove /voyager prefix for the voyager app (it expects root path)
         new_scope = dict(scope)
         new_scope["path"] = scope["path"][8:]  # Remove '/voyager'
         if new_scope["path"] == "":
@@ -81,9 +47,7 @@ async def asgi_app(scope, receive, send):
         # Forward to main app
         await app(scope, receive, send)
 
-
-# Export for uvicorn
-# Use either:
-# - uvicorn tests.litestar.embedding:app --reload (main app only)
-# - uvicorn tests.litestar.embedding:voyager_app --reload (voyager only)
-# - uvicorn tests.litestar.embedding:asgi_app --reload (combined)
+# Exports
+# - Use `uvicorn tests.litestar.embedding:asgi_app --reload` for combined app (main + voyager at /voyager)
+# - Use `uvicorn tests.litestar.embedding:app --reload` for main app only
+# - Use `uvicorn tests.litestar.embedding:voyager_app --reload` for voyager only

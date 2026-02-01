@@ -5,54 +5,57 @@ import importlib.util
 import logging
 import os
 import sys
-from typing import TYPE_CHECKING
+from typing import Any
 
 from fastapi_voyager import server as viz_server
 from fastapi_voyager.version import __version__
 from fastapi_voyager.voyager import Voyager
 
-if TYPE_CHECKING:
-    from fastapi import FastAPI
-
 logger = logging.getLogger(__name__)
 
+# Framework type constants
+SUPPORTED_FRAMEWORKS = ["fastapi", "litestar", "django-ninja"]
 
-def load_fastapi_app_from_file(module_path: str, app_name: str = "app") -> "FastAPI | None":
-    """Load FastAPI app from a Python module file."""
+
+def load_app_from_file(module_path: str, app_name: str = "app", framework: str | None = None) -> Any:
+    """Load web framework app from a Python module file."""
     try:
         # Convert relative path to absolute path
         if not os.path.isabs(module_path):
             module_path = os.path.abspath(module_path)
-        
+
         # Load the module
         spec = importlib.util.spec_from_file_location("app_module", module_path)
         if spec is None or spec.loader is None:
             logger.error(f"Could not load module from {module_path}")
             return None
-            
+
         module = importlib.util.module_from_spec(spec)
         sys.modules["app_module"] = module
         spec.loader.exec_module(module)
-        
-        # Get the FastAPI app instance
-        if hasattr(module, app_name):
-            app = getattr(module, app_name)
-            # Lazy import to avoid import errors when FastAPI is not installed
-            from fastapi import FastAPI
-            if isinstance(app, FastAPI):
-                return app
-            logger.error(f"'{app_name}' is not a FastAPI instance")
+
+        # Get the app instance
+        if not hasattr(module, app_name):
+            logger.error(f"No attribute '{app_name}' found in the module")
             return None
-        logger.error(f"No attribute '{app_name}' found in the module")
-        return None
-            
+
+        app = getattr(module, app_name)
+
+        # Verify app type if framework is specified
+        if framework is not None:
+            if not _validate_app_framework(app, framework):
+                logger.error(f"'{app_name}' is not a {framework} instance")
+                return None
+
+        return app
+
     except Exception as e:
-        logger.error(f"Error loading FastAPI app: {e}")
+        logger.error(f"Error loading app: {e}")
         return None
 
 
-def load_fastapi_app_from_module(module_name: str, app_name: str = "app") -> "FastAPI | None":
-    """Load FastAPI app from a Python module name."""
+def load_app_from_module(module_name: str, app_name: str = "app", framework: str | None = None) -> Any:
+    """Load web framework app from a Python module name."""
     try:
         # Temporarily add the current working directory to sys.path
         current_dir = os.getcwd()
@@ -61,37 +64,62 @@ def load_fastapi_app_from_module(module_name: str, app_name: str = "app") -> "Fa
             path_added = True
         else:
             path_added = False
-        
+
         try:
             # Import the module by name
             module = importlib.import_module(module_name)
-            
-            # Get the FastAPI app instance
-            if hasattr(module, app_name):
-                app = getattr(module, app_name)
-                # Lazy import to avoid import errors when FastAPI is not installed
-                from fastapi import FastAPI
-                if isinstance(app, FastAPI):
-                    return app
-                logger.error(f"'{app_name}' is not a FastAPI instance")
+
+            # Get the app instance
+            if not hasattr(module, app_name):
+                logger.error(f"No attribute '{app_name}' found in module '{module_name}'")
                 return None
-            logger.error(f"No attribute '{app_name}' found in module '{module_name}'")
-            return None
+
+            app = getattr(module, app_name)
+
+            # Verify app type if framework is specified
+            if framework is not None:
+                if not _validate_app_framework(app, framework):
+                    logger.error(f"'{app_name}' is not a {framework} instance")
+                    return None
+
+            return app
         finally:
             # Cleanup: if we added the path, remove it
             if path_added and current_dir in sys.path:
                 sys.path.remove(current_dir)
-            
+
     except ImportError as e:
         logger.error(f"Could not import module '{module_name}': {e}")
         return None
     except Exception as e:
-        logger.error(f"Error loading FastAPI app from module '{module_name}': {e}")
+        logger.error(f"Error loading app from module '{module_name}': {e}")
         return None
 
 
+def _validate_app_framework(app: Any, framework: str) -> bool:
+    """Validate that the app matches the expected framework type."""
+    try:
+        if framework == "fastapi":
+            from fastapi import FastAPI
+            return isinstance(app, FastAPI)
+        elif framework == "litestar":
+            from litestar import Litestar
+            return isinstance(app, Litestar)
+        elif framework == "django-ninja":
+            from ninja import NinjaAPI
+            return isinstance(app, NinjaAPI)
+        return False
+    except ImportError as e:
+        logger.error(
+            f"The {framework} package is not installed. "
+            f"Install it with: uv add fastapi-voyager[{framework}]"
+        )
+        logger.debug(f"Import error details: {e}")
+        return False
+
+
 def generate_visualization(
-    app: "FastAPI",
+    app: Any,
     output_file: str = "router_viz.dot", tags: list[str] | None = None,
     schema: str | None = None,
     show_fields: bool = False,
@@ -99,7 +127,7 @@ def generate_visualization(
     route_name: str | None = None,
 ):
 
-    """Generate DOT file for FastAPI router visualization."""
+    """Generate DOT file for API router visualization."""
     analytics = Voyager(
         include_tags=tags,
         schema=schema,
@@ -123,39 +151,46 @@ def generate_visualization(
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="Visualize FastAPI application's routing tree and dependencies",
+        description="Visualize web application's routing tree and dependencies (supports FastAPI, Litestar, Django-Ninja)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  voyager app.py                                                             # Load 'app' from app.py
-  voyager -m tests.demo                                                      # Load 'app' from demo module
-  voyager -m tests.demo --app=app                                            # Load 'app' from tests.demo
-  voyager -m tests.demo --schema=NodeA                                       # [str] filter nodes by schema name
-  voyager -m tests.demo --tags=page restful                                  # list[str] filter nodes route's tags
-  voyager -m tests.demo --module_color=tests.demo:red --module_color=tests.service:yellow  # list[str] filter nodes route's tags
-  voyager -m tests.demo -o my_graph.dot                                      # Output to my_graph.dot
-  voyager -m tests.demo --server                                             # start a local server to preview
-  voyager -m tests.demo --server --port=8001                                 # start a local server to preview
+  voyager app.py --web fastapi                                                       # Load 'app' from app.py (FastAPI)
+  voyager app.py --web litestar                                                      # Load 'app' from app.py (Litestar)
+  voyager -m tests.demo --web django-ninja                                             # Load 'app' from demo module (Django-Ninja)
+  voyager -m tests.demo --app=api --web fastapi                                       # Load 'api' from tests.demo
+  voyager -m tests.demo --web fastapi --schema=NodeA                                    # filter nodes by schema name
+  voyager -m tests.demo --web fastapi --tags=page restful                               # filter routes by tags
+  voyager -m tests.demo --web fastapi --module_color=tests.demo:red --module_color=tests.service:yellow
+  voyager -m tests.demo --web fastapi -o my_graph.dot                                   # Output to my_graph.dot
+  voyager -m tests.demo --web fastapi --server                                          # start a local server to preview
+  voyager -m tests.demo --web fastapi --server --port=8001                              # start a local server to preview
 """
     )
-    
+
     # Create mutually exclusive group for module loading options
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument(
         "module",
         nargs="?",
-        help="Python file containing the FastAPI application"
+        help="Python file containing the web application"
     )
     group.add_argument(
         "-m", "--module",
         dest="module_name",
-        help="Python module name containing the FastAPI application (like python -m)"
+        help="Python module name containing the web application (like python -m)"
     )
-    
+
+    parser.add_argument(
+        "--web",
+        choices=SUPPORTED_FRAMEWORKS,
+        help="Web framework type (required when using --server): fastapi, litestar, django-ninja"
+    )
+
     parser.add_argument(
         "--app", "-a",
         default="app",
-        help="Name of the FastAPI app variable (default: app)"
+        help="Name of the app variable (default: app)"
     )
     
     parser.add_argument(
@@ -229,26 +264,34 @@ Examples:
     )
     
     args = parser.parse_args()
-    
+
+    # Validate arguments
     if args.module_prefix and not args.server:
         parser.error("--module_prefix can only be used together with --server")
 
     if not (args.module_name or args.module):
-        parser.error("You must provide a module file, -m module name")
+        parser.error("You must provide a module file or -m module name")
+
+    # When --server is used, --web is required
+    if args.server and not args.web:
+        parser.error("--web is required when using --server. Please specify: fastapi, litestar, or django-ninja")
+
+    # Determine the framework (default to the one specified, or None for non-server mode)
+    framework = args.web if args.server else None
 
     # Configure logging based on --log-level
     level_name = (args.log_level or "INFO").upper()
     logging.basicConfig(level=level_name)
 
-    # Load FastAPI app based on the input method (module_name takes precedence)
+    # Load app based on the input method (module_name takes precedence)
     if args.module_name:
-        app = load_fastapi_app_from_module(args.module_name, args.app)
+        app = load_app_from_module(args.module_name, args.app, framework)
     else:
         if not os.path.exists(args.module):
             logger.error(f"File '{args.module}' not found")
             sys.exit(1)
-        app = load_fastapi_app_from_file(args.module, args.app)
-    
+        app = load_app_from_file(args.module, args.app, framework)
+
     if app is None:
         sys.exit(1)
     
@@ -269,18 +312,21 @@ Examples:
     try:
         module_color = parse_kv_pairs(args.module_color)
         if args.server:
-            # Build a preview server which computes DOT via Analytics using closure state
+            # Build a preview server using the appropriate framework
             try:
                 import uvicorn
             except ImportError:
                 logger.info("uvicorn is required to run the server. Install via 'pip install uvicorn' or 'uv add uvicorn'.")
                 sys.exit(1)
+
+            # Create voyager app - it auto-detects framework and returns appropriate app type
             app_server = viz_server.create_voyager(
                 app,
                 module_color=module_color,
                 module_prefix=args.module_prefix,
+                server_mode=True,  # Enable server mode to serve at root path
             )
-            logger.info(f"Starting preview server at http://{args.host}:{args.port} ... (Ctrl+C to stop)")
+            logger.info(f"Starting {args.web} preview server at http://{args.host}:{args.port} ... (Ctrl+C to stop)")
             uvicorn.run(app_server, host=args.host, port=args.port, log_level=level_name.lower())
         else:
             # Generate and write dot file locally
