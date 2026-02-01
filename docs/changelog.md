@@ -199,6 +199,7 @@
     - [ ] 4.show loader name
     - [ ] 5.show relationship list when double click entity in er diagram
     - [ ] 6.highlight entity in use case
+    - [ ] 7.change cli -m param, use `path.to.module:app` instead.
 
 ## 1.0, release 
     - [ ] add tests
