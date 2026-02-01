@@ -39,10 +39,10 @@ echo ""
 
 # Start Litestar server
 echo "🌟 Starting Litestar Voyager server..."
-echo "   App: tests.litestar.embedding:asgi_app"
+echo "   App: tests.litestar.embedding:app"
 echo "   URL: http://127.0.0.1:8000"
 echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-uv run uvicorn tests.litestar.embedding:asgi_app --reload --host 127.0.0.1 --port 8000
+uv run uvicorn tests.litestar.embedding:app --reload --host 127.0.0.1 --port 8000

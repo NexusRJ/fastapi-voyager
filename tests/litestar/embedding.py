@@ -2,14 +2,20 @@
 Litestar embedding example for fastapi-voyager.
 
 This module demonstrates how to integrate voyager with a Litestar application.
-"""
-from fastapi_voyager import create_voyager
-from tests.litestar.demo import app, diagram
 
-# Create voyager app for visualization
-# Note: create_voyager automatically detects Litestar and returns a Litestar app
+Unlike FastAPI, Litestar doesn't support mounting to an existing app after creation.
+The recommended pattern is to reuse the ROUTE_HANDLERS from demo.py.
+"""
+from typing import Any, Awaitable, Callable
+
+from litestar import Litestar, asgi
+
+from fastapi_voyager import create_voyager
+from tests.litestar.demo import ROUTE_HANDLERS, app as demo_app, diagram
+
+# Create voyager app (returns a Litestar app)
 voyager_app = create_voyager(
-    app,
+    demo_app,
     er_diagram=diagram,
     module_color={"tests.service": "purple"},
     module_prefix="tests.service",
@@ -20,34 +26,19 @@ voyager_app = create_voyager(
     enable_pydantic_resolve_meta=True
 )
 
-# ASGI app that routes between main app and voyager
-# This allows voyager to be accessed at /voyager while the main app handles other routes
-async def asgi_app(scope, receive, send):
-    """
-    ASGI app that routes between main app and voyager.
+# Mount voyager using Litestar's @asgi() decorator
+@asgi("/voyager", is_mount=True, copy_scope=True)
+async def voyager_mount(
+    scope: dict[str, Any],
+    receive: Callable[[], Awaitable[dict[str, Any]]],
+    send: Callable[[dict[str, Any]], Awaitable[None]]
+) -> None:
+    await voyager_app(scope, receive, send)
 
-    Usage:
-        uvicorn tests.litestar.embedding:asgi_app --reload
-
-    Then access:
-        - http://localhost:8000/demo/* for the main app
-        - http://localhost:8000/voyager for voyager UI
-    """
-    if scope["type"] == "http" and scope["path"].startswith("/voyager"):
-        # Forward to voyager app
-        # Remove /voyager prefix for the voyager app (it expects root path)
-        new_scope = dict(scope)
-        new_scope["path"] = scope["path"][8:]  # Remove '/voyager'
-        if new_scope["path"] == "":
-            new_scope["path"] = "/"
-        if "raw_path" in new_scope:
-            new_scope["raw_path"] = scope["raw_path"][8:]
-        await voyager_app(new_scope, receive, send)
-    else:
-        # Forward to main app
-        await app(scope, receive, send)
+# Create combined app by reusing ROUTE_HANDLERS from demo.py
+# This is the recommended pattern for Litestar
+app = Litestar(route_handlers=ROUTE_HANDLERS + [voyager_mount])
 
 # Exports
-# - Use `uvicorn tests.litestar.embedding:asgi_app --reload` for combined app (main + voyager at /voyager)
-# - Use `uvicorn tests.litestar.embedding:app --reload` for main app only
-# - Use `uvicorn tests.litestar.embedding:voyager_app --reload` for voyager only
+# - Use `uvicorn tests.litestar.embedding:app --reload` for combined app
+# - Use `uvicorn tests.litestar.embedding:demo_app --reload` for demo only

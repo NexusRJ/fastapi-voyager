@@ -24,11 +24,11 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
 @pytest_asyncio.fixture
 async def async_client() -> AsyncGenerator[httpx.AsyncClient, None]:
     """Create an async HTTP client for testing Litestar embedding."""
-    # Import the ASGI application from tests.litestar.embedding
-    from tests.litestar.embedding import asgi_app
+    # Import the combined app from tests.litestar.embedding
+    from tests.litestar.embedding import app
 
     # Use ASGITransport for testing ASGI apps with httpx
-    transport = httpx.ASGITransport(app=asgi_app)
+    transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 

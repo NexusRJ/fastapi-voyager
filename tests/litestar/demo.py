@@ -132,7 +132,10 @@ class DemoController(Controller):
         return True
 
 
+# Export route handlers for extension (e.g., adding voyager)
+ROUTE_HANDLERS = [DemoController]
+
 # Create a Litestar app instance - this is the main app that can be run directly
 app = Litestar(
-    route_handlers=[DemoController]
+    route_handlers=ROUTE_HANDLERS
 )

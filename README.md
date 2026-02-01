@@ -154,34 +154,44 @@ uvicorn your_app:application --reload
 
 ### Litestar
 
+Litestar doesn't support mounting to an existing app like FastAPI. The recommended pattern is to export `ROUTE_HANDLERS` from your main app:
+
 ```python
-from litestar import Litestar, get
+# In your main app file (e.g., app.py)
+from litestar import Litestar, Controller
+
+class MyController(Controller):
+    # ... your routes ...
+
+ROUTE_HANDLERS = [MyController]  # Export for extension
+app = Litestar(route_handlers=ROUTE_HANDLERS)
+```
+
+Then create voyager by reusing `ROUTE_HANDLERS`:
+
+```python
+# In your voyager embedding file
+from typing import Any, Awaitable, Callable
+from litestar import Litestar, asgi
 from fastapi_voyager import create_voyager
+from your_app import ROUTE_HANDLERS, app as your_app
 
-# Create Litestar app
-app = Litestar()
+voyager_app = create_voyager(your_app)
 
-@get("/hello")
-def hello() -> dict:
-    return {"message": "Hello World"}
+@asgi("/voyager", is_mount=True, copy_scope=True)
+async def voyager_mount(
+    scope: dict[str, Any],
+    receive: Callable[[], Awaitable[dict[str, Any]]],
+    send: Callable[[dict[str, Any]], Awaitable[None]]
+) -> None:
+    await voyager_app(scope, receive, send)
 
-# Create voyager app (returns a Litestar app)
-voyager_app = create_voyager(app)
-
-# Create ASGI application that routes between main app and voyager
-async def asgi_app(scope, receive, send):
-    if scope["type"] == "http" and scope["path"].startswith("/voyager"):
-        # Remove /voyager prefix for voyager app
-        new_scope = dict(scope)
-        new_scope["path"] = scope["path"][8:] or "/"
-        await voyager_app(new_scope, receive, send)
-    else:
-        await app(scope, receive, send)
+app = Litestar(route_handlers=ROUTE_HANDLERS + [voyager_mount])
 ```
 
 Start with:
 ```bash
-uvicorn your_app:asgi_app --reload
+uvicorn your_app:app --reload
 # Visit http://localhost:8000/voyager
 ```
 
