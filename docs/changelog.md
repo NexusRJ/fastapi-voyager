@@ -183,14 +183,26 @@
     - [x] fix import error
 - 0.16.0alpha-3
     - [x] fix voyager cli, add web parameter
+- 0.16.1
+    - [x] improve litestar support
 
 ## 0.17, enhance er diagram
 - 0.17.0
-    - [ ] show loader name
-    - [ ] show relationship list when double click entity in er diagram
-    - [ ] highlight entity in use case
+    - [x] 1.different theme color for frameworks
+        - fastapi, keep current
+        - django-ninja, #4cae4f
+        - litestar, rgb(237, 182, 65)
+    - [x] 2.highight entity classes
+        - enable if er diagram is enabled
+        - entities in er diagram should be labeled as "Entity" after the title, and title should be bold
+    - [ ] 3.click esc to cancel search
+    - [ ] 4.show loader name
+    - [ ] 5.show relationship list when double click entity in er diagram
+    - [ ] 6.highlight entity in use case
 
 ## 1.0, release 
     - [ ] add tests
+
+## 1.1 future
 
 

@@ -93,12 +93,25 @@ class VoyagerContext:
         config = RenderConfig()
         return config.colors.get_framework_color(self._framework_type)
 
+    def _get_entity_class_names(self) -> set[str] | None:
+        """Extract entity class names from er_diagram."""
+        if not self.er_diagram:
+            return None
+
+        from fastapi_voyager.type_helper import full_class_name
+
+        return {
+            full_class_name(entity.kls)
+            for entity in self.er_diagram.configs
+        }
+
     def get_voyager(self, **kwargs) -> Voyager:
         """Create a Voyager instance with common configuration."""
         config = {
             "module_color": self.module_color,
             "show_pydantic_resolve_meta": self.enable_pydantic_resolve_meta,
             "theme_color": self._get_theme_color(),
+            "entity_class_names": self._get_entity_class_names(),
         }
         config.update(kwargs)
         return Voyager(**config)

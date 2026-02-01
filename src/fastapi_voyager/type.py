@@ -48,6 +48,7 @@ class ModuleRoute:
 class SchemaNode(NodeBase):
     module: str
     fields: list[FieldInfo] = field(default_factory=list)
+    is_entity: bool = False  # Mark if this is an ER diagram entity
 
 @dataclass
 class ModuleNode:

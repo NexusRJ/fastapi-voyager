@@ -53,7 +53,7 @@ class LitestarAdapter(VoyagerAdapter):
         from litestar import Litestar, MediaType, Request, Response, get, post
         from litestar.static_files import create_static_files_router
 
-        @get("/er-diagram")
+        @post("/er-diagram")
         async def get_er_diagram(request: Request) -> str:
             payload = await request.json()
             return self.ctx.get_er_diagram_dot(payload)

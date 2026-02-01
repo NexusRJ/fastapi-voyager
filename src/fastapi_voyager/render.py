@@ -240,7 +240,8 @@ class Renderer:
             'html/schema_header.j2',
             text=node.name,
             bg_color=header_color,
-            port=PK
+            port=PK,
+            is_entity=node.is_entity
         )
 
         # Render complete table

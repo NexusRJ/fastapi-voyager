@@ -16,6 +16,7 @@ from fastapi_voyager.type_helper import (
     get_core_types,
     get_pydantic_fields,
     get_type_name,
+    is_base_entity_subclass,
     is_inheritance_of_pydantic_base,
     is_non_pydantic_type,
     update_forward_refs,
@@ -35,6 +36,7 @@ class Voyager:
             show_module: bool = True,
             show_pydantic_resolve_meta: bool = False,
             theme_color: str | None = None,
+            entity_class_names: set[str] | None = None,
         ):
 
         self.routes: list[Route] = []
@@ -59,6 +61,7 @@ class Voyager:
         self.show_module = show_module
         self.show_pydantic_resolve_meta = show_pydantic_resolve_meta
         self.theme_color = theme_color
+        self.entity_class_names = entity_class_names
 
     def _get_introspector(self, app) -> AppIntrospector:
         """
@@ -191,7 +194,7 @@ class Voyager:
         """
         full_name = full_class_name(schema)
         bases_fields = get_bases_fields([s for s in schema.__bases__ if is_inheritance_of_pydantic_base(s)])
-        
+
         subset_reference = getattr(schema, const.ENSURE_SUBSET_REFERENCE, None)
         if subset_reference and is_inheritance_of_pydantic_base(subset_reference):
             bases_fields.update(get_bases_fields([subset_reference]))
@@ -199,10 +202,11 @@ class Voyager:
         if full_name not in self.node_set:
             # skip meta info for normal queries
             self.node_set[full_name] = SchemaNode(
-                id=full_name, 
+                id=full_name,
                 module=schema.__module__,
                 name=schema.__name__,
-                fields=get_pydantic_fields(schema, bases_fields)
+                fields=get_pydantic_fields(schema, bases_fields),
+                is_entity=is_base_entity_subclass(schema, self.entity_class_names)
             )
         return full_name
 

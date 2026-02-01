@@ -168,10 +168,11 @@ class VoyagerErDiagram:
         if full_name not in self.node_set:
             # skip meta info for normal queries
             self.node_set[full_name] = SchemaNode(
-                id=full_name, 
+                id=full_name,
                 module=schema.__module__,
                 name=schema.__name__,
-                fields=get_fields(schema, fk_set)
+                fields=get_fields(schema, fk_set),
+                is_entity=False  # Don't mark in ER diagram
             )
         return full_name
 

@@ -29,6 +29,26 @@ def full_class_name(cls):
     return f"{cls.__module__}.{cls.__qualname__}"
 
 
+def is_base_entity_subclass(schema, entity_class_names: set[str] | None = None) -> bool:
+    """
+    Check if a schema is a pydantic-resolve BaseEntity entity.
+
+    Checks if the class's full name is in the entity_class_names set.
+
+    Args:
+        schema: The schema class to check
+        entity_class_names: Optional set of full class names from er_diagram.configs
+
+    Returns:
+        True if the schema is an entity, False otherwise
+    """
+    if not entity_class_names:
+        return False
+
+    schema_full_name = full_class_name(schema)
+    return schema_full_name in entity_class_names
+
+
 def get_core_types(tp):
     """
     - get the core type
