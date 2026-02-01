@@ -5,9 +5,6 @@ This module provides the Litestar-specific implementation of the voyager server.
 """
 from typing import Any
 
-from litestar import Litestar, MediaType, Request, Response, get, post
-from litestar.static_files import create_static_files_router
-
 from fastapi_voyager.adapters.base import VoyagerAdapter
 from fastapi_voyager.adapters.common import STATIC_FILES_PATH, WEB_DIR, VoyagerContext
 from fastapi_voyager.type import CoreData, SchemaNode, Tag
@@ -47,8 +44,11 @@ class LitestarAdapter(VoyagerAdapter):
         )
         self.gzip_minimum_size = gzip_minimum_size
 
-    def create_app(self) -> Litestar:
+    def create_app(self) -> Any:
         """Create and return a Litestar application with voyager endpoints."""
+        # Lazy import Litestar to avoid import errors when framework is not installed
+        from litestar import Litestar, MediaType, Request, Response, get, post
+        from litestar.static_files import create_static_files_router
 
         @get("/er-diagram")
         async def get_er_diagram(request: Request) -> str:

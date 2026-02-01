@@ -5,11 +5,7 @@ This module provides the FastAPI-specific implementation of the voyager server.
 """
 from typing import Any, Literal
 
-from fastapi import APIRouter, FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from starlette.middleware.gzip import GZipMiddleware
 
 from fastapi_voyager.adapters.base import VoyagerAdapter
 from fastapi_voyager.adapters.common import STATIC_FILES_PATH, VoyagerContext
@@ -98,8 +94,14 @@ class FastAPIAdapter(VoyagerAdapter):
         )
         self.gzip_minimum_size = gzip_minimum_size
 
-    def create_app(self) -> FastAPI:
+    def create_app(self) -> Any:
         """Create and return a FastAPI application with voyager endpoints."""
+        # Lazy import FastAPI to avoid import errors when framework is not installed
+        from fastapi import APIRouter, FastAPI
+        from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+        from fastapi.staticfiles import StaticFiles
+        from starlette.middleware.gzip import GZipMiddleware
+
         router = APIRouter(tags=["fastapi-voyager"])
 
         @router.post("/er-diagram", response_class=PlainTextResponse)

@@ -5,17 +5,19 @@ import importlib.util
 import logging
 import os
 import sys
-
-from fastapi import FastAPI
+from typing import TYPE_CHECKING
 
 from fastapi_voyager import server as viz_server
 from fastapi_voyager.version import __version__
 from fastapi_voyager.voyager import Voyager
 
+if TYPE_CHECKING:
+    from fastapi import FastAPI
+
 logger = logging.getLogger(__name__)
 
 
-def load_fastapi_app_from_file(module_path: str, app_name: str = "app") -> FastAPI | None:
+def load_fastapi_app_from_file(module_path: str, app_name: str = "app") -> "FastAPI | None":
     """Load FastAPI app from a Python module file."""
     try:
         # Convert relative path to absolute path
@@ -35,6 +37,8 @@ def load_fastapi_app_from_file(module_path: str, app_name: str = "app") -> FastA
         # Get the FastAPI app instance
         if hasattr(module, app_name):
             app = getattr(module, app_name)
+            # Lazy import to avoid import errors when FastAPI is not installed
+            from fastapi import FastAPI
             if isinstance(app, FastAPI):
                 return app
             logger.error(f"'{app_name}' is not a FastAPI instance")
@@ -47,7 +51,7 @@ def load_fastapi_app_from_file(module_path: str, app_name: str = "app") -> FastA
         return None
 
 
-def load_fastapi_app_from_module(module_name: str, app_name: str = "app") -> FastAPI | None:
+def load_fastapi_app_from_module(module_name: str, app_name: str = "app") -> "FastAPI | None":
     """Load FastAPI app from a Python module name."""
     try:
         # Temporarily add the current working directory to sys.path
@@ -65,6 +69,8 @@ def load_fastapi_app_from_module(module_name: str, app_name: str = "app") -> Fas
             # Get the FastAPI app instance
             if hasattr(module, app_name):
                 app = getattr(module, app_name)
+                # Lazy import to avoid import errors when FastAPI is not installed
+                from fastapi import FastAPI
                 if isinstance(app, FastAPI):
                     return app
                 logger.error(f"'{app_name}' is not a FastAPI instance")
@@ -85,7 +91,7 @@ def load_fastapi_app_from_module(module_name: str, app_name: str = "app") -> Fas
 
 
 def generate_visualization(
-    app: FastAPI,
+    app: "FastAPI",
     output_file: str = "router_viz.dot", tags: list[str] | None = None,
     schema: str | None = None,
     show_fields: bool = False,

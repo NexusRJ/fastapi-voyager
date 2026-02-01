@@ -4,10 +4,12 @@ FastAPI implementation of the AppIntrospector interface.
 This module provides the adapter that allows fastapi-voyager to work with FastAPI applications.
 """
 from collections.abc import Iterator
-
-from fastapi import FastAPI, routing
+from typing import TYPE_CHECKING, Any
 
 from fastapi_voyager.introspectors.base import AppIntrospector, RouteInfo
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 
 class FastAPIIntrospector(AppIntrospector):
@@ -18,7 +20,7 @@ class FastAPIIntrospector(AppIntrospector):
     and converts it to the framework-agnostic RouteInfo format.
     """
 
-    def __init__(self, app: FastAPI, swagger_url: str | None = None):
+    def __init__(self, app: "FastAPI", swagger_url: str | None = None):
         """
         Initialize the FastAPI introspector.
 
@@ -26,6 +28,12 @@ class FastAPIIntrospector(AppIntrospector):
             app: The FastAPI application instance
             swagger_url: Optional custom URL to Swagger documentation
         """
+        # Lazy import to avoid import errors when FastAPI is not installed
+        from fastapi import FastAPI
+
+        if not isinstance(app, FastAPI):
+            raise TypeError(f"Expected FastAPI instance, got {type(app)}")
+
         self.app = app
         self.swagger_url = swagger_url or "/docs"
 
@@ -36,6 +44,9 @@ class FastAPIIntrospector(AppIntrospector):
         Yields:
             RouteInfo: Standardized route information for each API route
         """
+        # Lazy import routing to avoid import errors when FastAPI is not installed
+        from fastapi import routing
+
         for route in self.app.routes:
             # Only process APIRoute instances (not static files, etc.)
             if isinstance(route, routing.APIRoute):
@@ -66,7 +77,7 @@ class FastAPIIntrospector(AppIntrospector):
         """
         return self.swagger_url
 
-    def _get_route_id(self, route: routing.APIRoute) -> str:
+    def _get_route_id(self, route: Any) -> str:
         """
         Generate a unique identifier for the route.
 

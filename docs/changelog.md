@@ -179,6 +179,8 @@
 ## 0.16
 - 0.16.0alpha-1
     - [x] support django ninja and litestar
+- 0.16.0alpha-2
+    - [x] fix import error
 
 ## 0.17, enhance er diagram
 - 0.17.0
