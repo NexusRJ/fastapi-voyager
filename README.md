@@ -284,6 +284,8 @@ voyager -m tests.demo --server --port=8002
 voyager -m tests.demo --server --app my_app
 ```
 
+> **Note**: Server mode does not support ER diagram or pydantic-resolve metadata configuration. Use `create_voyager()` in your code with `er_diagram` and `enable_pydantic_resolve_meta` parameters to enable these features.
+
 ### Generate DOT File
 
 ```bash
