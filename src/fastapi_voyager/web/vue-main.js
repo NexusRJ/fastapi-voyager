@@ -5,7 +5,7 @@ import RenderGraph from "./component/render-graph.js"
 import { GraphUI } from "./graph-ui.js"
 import { store } from "./store.js"
 
-const { createApp, onMounted, ref, watch } = window.Vue
+const { createApp, onMounted, onUnmounted, ref, watch } = window.Vue
 
 // Load toggle states from localStorage
 function loadToggleState(key, defaultValue = false) {
@@ -296,6 +296,19 @@ const app = createApp({
         document.title = `${store.state.framework_name} Voyager`
       }
       // Reveal app content only after initial JS/data is ready
+
+      // Add keyboard event listener for ESC to cancel search
+      const handleKeyDown = (event) => {
+        if (event.key === "Escape" && store.state.search.mode) {
+          resetSearch()
+        }
+      }
+      document.addEventListener("keydown", handleKeyDown)
+
+      // Cleanup on unmount
+      onUnmounted(() => {
+        document.removeEventListener("keydown", handleKeyDown)
+      })
     })
 
     return {

@@ -521,6 +521,11 @@ const actions = {
    */
   resetSearchState() {
     state.search.mode = false
+    // Clear search schema and field selection
+    state.search.schemaName = null
+    state.search.fieldName = null
+    state.search.fieldOptions = []
+
     const hadPreviousValue = state.previousTagRoute.hasValue
 
     if (hadPreviousValue) {
