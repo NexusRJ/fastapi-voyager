@@ -230,8 +230,8 @@ export class MagnifyingGlass {
     }
 
     // 计算鼠标在 SVG 坐标系中的绝对坐标
-    const absoluteX = lensX + x
-    const absoluteY = lensY + y
+    const absoluteX = lensX * this.magnification + x
+    const absoluteY = lensY * this.magnification + y
 
     // Apply correct transform: 基于 SVG 坐标系，将内容居中到鼠标位置然后缩放
     const scale = this.magnification
