@@ -12,16 +12,25 @@
  */
 
 export class MagnifyingGlass {
+  // Class constants
+  static DEFAULT_MAGNIFICATION = 2.0
+  static DEFAULT_RADIUS = 100
+  static LENS_OFFSET = 10 // 放大镜相对于鼠标的偏移量
+  static BORDER_WIDTH = 2 // 边框宽度
+  static UPDATE_THROTTLE_MS = 16 // 更新节流（约60fps）
+
   /**
    * @param {SVGElement} svgElement - The SVG element to magnify
    * @param {Object} options - Configuration options
    * @param {number} options.magnification - Zoom level (default: 2.0)
    * @param {number} options.radius - Lens radius in pixels (default: 100)
+   * @param {boolean} options.debug - Enable debug logging (default: false)
    */
   constructor(svgElement, options = {}) {
     this.svg = svgElement
-    this.magnification = options.magnification || 2.0
-    this.radius = options.radius || 100
+    this.magnification = options.magnification || MagnifyingGlass.DEFAULT_MAGNIFICATION
+    this.radius = options.radius || MagnifyingGlass.DEFAULT_RADIUS
+    this.debug = options.debug || false
     this.active = false
 
     // Throttle updates for performance
@@ -33,15 +42,25 @@ export class MagnifyingGlass {
   }
 
   /**
+   * Internal logging method
+   * @private
+   */
+  _log(...args) {
+    if (this.debug) {
+      console.log("[MagnifyingGlass]", ...args)
+    }
+  }
+
+  /**
    * Initialize the lens SVG elements
    * @private
    */
   _initLens() {
-    console.log("[MagnifyingGlass] Initializing lens...")
+    this._log("Initializing lens...")
     // 1. Create defs and clipPath
     const defs = d3.select(this.svg).append("defs")
     this.clipPathId = `lens-clip-${Math.random().toString(36).substr(2, 9)}`
-    console.log("[MagnifyingGlass] clipPathId:", this.clipPathId)
+    this._log("clipPathId:", this.clipPathId)
 
     defs
       .append("clipPath")
@@ -62,10 +81,10 @@ export class MagnifyingGlass {
     this.lensGroup
       .append("circle")
       .attr("class", "lens-border")
-      .attr("r", this.radius + 2)
+      .attr("r", this.radius + MagnifyingGlass.BORDER_WIDTH)
       .attr("fill", "rgba(255,255,255,0.95)")
       .attr("stroke", "#999")
-      .attr("stroke-width", 2)
+      .attr("stroke-width", MagnifyingGlass.BORDER_WIDTH)
       .attr("cx", 0) // Initialize at origin, will be updated on mouse move
       .attr("cy", 0)
 
@@ -76,7 +95,7 @@ export class MagnifyingGlass {
       .append("g")
       .attr("class", "lens-content")
 
-    console.log("[MagnifyingGlass] Lens initialized successfully")
+    this._log("Lens initialized successfully")
   }
 
   /**
@@ -88,14 +107,14 @@ export class MagnifyingGlass {
     this._handleKeyDown = (e) => {
       if (e.code === "Space" && !e.repeat) {
         e.preventDefault()
-        console.log("[MagnifyingGlass] Space pressed, activating...")
+        this._log("Space pressed, activating...")
         this.toggle()
       }
     }
 
     this._handleKeyUp = (e) => {
       if (e.code === "Space") {
-        console.log("[MagnifyingGlass] Space released, deactivating...")
+        this._log("Space released, deactivating...")
         this.deactivate()
       }
     }
@@ -115,7 +134,7 @@ export class MagnifyingGlass {
 
     this._handleClick = (e) => {
       if (this.active) {
-        console.log("[MagnifyingGlass] Clicked, deactivating...")
+        this._log("Clicked, deactivating...")
         this.deactivate()
       }
     }
@@ -125,7 +144,7 @@ export class MagnifyingGlass {
     this.svg.addEventListener("mousemove", this._handleMouseMove)
     this.svg.addEventListener("click", this._handleClick)
 
-    console.log("[MagnifyingGlass] Events bound successfully")
+    this._log("Events bound successfully")
   }
 
   /**
@@ -179,7 +198,7 @@ export class MagnifyingGlass {
     // 调整放大镜位置，使其在鼠标上方，靠近下方边缘外侧
     // 偏移量：向下一点，让鼠标位于放大镜底部边缘外侧
     const offsetX = 0
-    const offsetY = this.radius + 10 // 放大镜半径 + 10 像素偏移
+    const offsetY = this.radius + MagnifyingGlass.LENS_OFFSET // 放大镜半径 + 偏移量
 
     const lensX = svgP.x + offsetX
     const lensY = svgP.y - offsetY // 向上偏移
@@ -252,7 +271,7 @@ export class MagnifyingGlass {
    * Activate the magnifying glass
    */
   activate() {
-    console.log("[MagnifyingGlass] Activating magnifier...")
+    this._log("Activating magnifier...")
     this.active = true
     this.lensGroup.style("display", null)
     d3.select(this.svg).classed("magnifier-active", true)
@@ -289,7 +308,7 @@ export class MagnifyingGlass {
    * Deactivate the magnifying glass
    */
   deactivate() {
-    console.log("[MagnifyingGlass] Deactivating magnifier...")
+    this._log("Deactivating magnifier...")
     this.active = false
     this.lensGroup.style("display", "none")
     d3.select(this.svg).classed("magnifier-active", false)
@@ -307,7 +326,7 @@ export class MagnifyingGlass {
    * Clean up and remove lens elements
    */
   destroy() {
-    console.log("[MagnifyingGlass] Destroying...")
+    this._log("Destroying...")
     // Remove event listeners
     document.removeEventListener("keydown", this._handleKeyDown)
     document.removeEventListener("keyup", this._handleKeyUp)
