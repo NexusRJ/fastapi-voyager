@@ -187,17 +187,18 @@ export class MagnifyingGlass {
     // Move lens group to adjusted position
     this.lensGroup.attr("transform", `translate(${lensX}, ${lensY})`)
 
-    // Move clipPath circle to original mouse position (保持内容对齐)
-    d3.select(`#${this.clipPathId} circle`).attr("cx", svgP.x).attr("cy", svgP.y)
+    // 计算相对于 lensGroup 的坐标
+    const relativeCX = svgP.x - lensX
+    const relativeCY = svgP.y - lensY
+
+    // Move clipPath circle to relative position within lensGroup
+    d3.select(`#${this.clipPathId} circle`).attr("cx", relativeCX).attr("cy", relativeCY)
 
     // Move lens border circle to adjusted position relative to lens group
-    this.lensGroup
-      .select(".lens-border")
-      .attr("cx", svgP.x - lensX)
-      .attr("cy", svgP.y - lensY)
+    this.lensGroup.select(".lens-border").attr("cx", relativeCX).attr("cy", relativeCY)
 
-    // Update magnified content
-    this._updateContent(svgP.x, svgP.y)
+    // Update magnified content with relative coordinates
+    this._updateContent(relativeCX, relativeCY)
   }
 
   /**
@@ -216,12 +217,27 @@ export class MagnifyingGlass {
     const clonedContent = mainGroup.clone(true).node()
     this.lensContent.node().appendChild(clonedContent)
 
-    // Apply correct transform: 居中到(x,y)，然后缩放
-    // 关键修复：考虑 SVG 原始位置
-    const scale = this.magnification
-    this.lensContent.attr("transform", `translate(${-x}, ${-y}) scale(${scale})`)
+    // 计算透镜组相对于 SVG 的绝对坐标
+    const lensGroupTransform = this.lensGroup.attr("transform")
+    let lensX = 0,
+      lensY = 0
+    if (lensGroupTransform) {
+      const translateMatch = lensGroupTransform.match(/translate\(([^,]+),\s*([^)]+)\)/)
+      if (translateMatch) {
+        lensX = parseFloat(translateMatch[1])
+        lensY = parseFloat(translateMatch[2])
+      }
+    }
 
-    this._lastPosition = { x, y }
+    // 计算鼠标在 SVG 坐标系中的绝对坐标
+    const absoluteX = lensX + x
+    const absoluteY = lensY + y
+
+    // Apply correct transform: 基于 SVG 坐标系，将内容居中到鼠标位置然后缩放
+    const scale = this.magnification
+    this.lensContent.attr("transform", `translate(${-absoluteX}, ${-absoluteY}) scale(${scale})`)
+
+    this._lastPosition = { x: absoluteX, y: absoluteY }
   }
 
   /**
