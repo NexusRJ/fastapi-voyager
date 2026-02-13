@@ -209,7 +209,7 @@
 - 0.17.2
     - [x] enable PWA
 - 0.17.3
-    - [ ] 1.show loader name
+    - [x] 1.show loader name
     - [ ] 2.show relationship list when double click entity in er diagram
     - [ ] 3.highlight entity in use case
     - [ ] 4.change cli -m param, use `path.to.module:app` instead.

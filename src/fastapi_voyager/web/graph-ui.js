@@ -13,7 +13,7 @@ export class GraphUI {
   constructor(selector = "#graph", options = {}) {
     this.selector = selector
     this.options = options // e.g. { onSchemaClick: (name) => {} }
-    this.graphviz = d3.select(this.selector).graphviz()
+    this.graphviz = d3.select(this.selector).graphviz().zoom(false)
 
     this.gv = null
     this.currentSelection = []

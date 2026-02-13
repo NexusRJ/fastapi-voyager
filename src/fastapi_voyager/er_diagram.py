@@ -19,10 +19,24 @@ from fastapi_voyager.type_helper import (
     full_class_name,
     get_core_types,
     get_type_name,
+    is_list,
     update_forward_refs,
 )
 
+ARROR = "=>"
 logger = getLogger(__name__)
+
+
+def _get_loader_name(loader) -> str | None:
+    """Extract loader function name (without module path)."""
+    if loader is None:
+        return None
+    # loader is a callable, get its __name__ or __qualname__
+    name = getattr(loader, '__name__', None) or getattr(loader, '__qualname__', None)
+    if name and '.' in name:
+        # Return only the function name, not the full path
+        return name.split('.')[-1]
+    return name
 
 
 class DiagramRenderer(Renderer):
@@ -134,18 +148,30 @@ class VoyagerErDiagram:
                 self.add_to_node_set(anno, fk_set=self.fk_set.get(full_class_name(anno)))
                 source_name = f'{full_class_name(schema)}::f{relationship.field}'
                 if isinstance(relationship, Relationship):
+                    # Build label with cardinality and loader name
+                    cardinality = f'1 {ARROR} N' if is_list(relationship.target_kls) else f'1 {ARROR} 1'
+                    loader_name = _get_loader_name(relationship.loader)
+                    label = cardinality
+                    if loader_name:
+                        label = f'{label}\n({loader_name})'
                     self.add_to_link_set(
                         source=source_name,
                         source_origin=full_class_name(schema),
                         target=self.generate_node_head(full_class_name(anno)),
                         target_origin=full_class_name(anno),
                         type='schema',
-                        label=get_type_name(relationship.target_kls),
+                        label=label,
                         style='solid' if relationship.loader else 'solid, dashed'
                         )
 
                 elif isinstance(relationship, MultipleRelationship):
                     for link in relationship.links:
+                        # Build label with cardinality, biz name and loader name
+                        cardinality = f'1 {ARROR} N' if is_list(relationship.target_kls) else f'1 {ARROR} 1'
+                        loader_name = _get_loader_name(link.loader)
+                        label = f'{cardinality} / {link.biz}'
+                        if loader_name:
+                            label = f'{label}\n({loader_name})'
                         self.add_to_link_set(
                             source=source_name,
                             source_origin=full_class_name(schema),
@@ -153,7 +179,7 @@ class VoyagerErDiagram:
                             target_origin=full_class_name(anno),
                             type='schema',
                             biz=link.biz,
-                            label=f'{get_type_name(relationship.target_kls)} / {link.biz} ',
+                            label=label,
                             style='solid' if link.loader else 'solid, dashed'
                         )
 
