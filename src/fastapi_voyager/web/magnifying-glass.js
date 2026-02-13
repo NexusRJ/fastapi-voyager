@@ -27,9 +27,19 @@ export class MagnifyingGlass {
    * @param {boolean} options.debug - Enable debug logging (default: false)
    */
   constructor(svgElement, options = {}) {
+    // Validate SVG element
+    if (!svgElement || !(svgElement instanceof SVGElement)) {
+      throw new Error("[MagnifyingGlass] Invalid SVG element provided")
+    }
+
     this.svg = svgElement
-    this.magnification = options.magnification || MagnifyingGlass.DEFAULT_MAGNIFICATION
-    this.radius = options.radius || MagnifyingGlass.DEFAULT_RADIUS
+    this.magnification = this._validateNumber(
+      options.magnification,
+      MagnifyingGlass.DEFAULT_MAGNIFICATION,
+      0.1,
+      10
+    )
+    this.radius = this._validateNumber(options.radius, MagnifyingGlass.DEFAULT_RADIUS, 10, 500)
     this.debug = options.debug || false
     this.active = false
 
@@ -37,8 +47,28 @@ export class MagnifyingGlass {
     this._pendingUpdate = false
     this._lastPosition = null
 
+    // Content caching for performance
+    this._cachedContent = null
+    this._contentDirty = true
+
     this._initLens()
     this._bindEvents()
+  }
+
+  /**
+   * Validate and sanitize number input
+   * @param {*} value - Value to validate
+   * @param {number} defaultValue - Default value if invalid
+   * @param {number} min - Minimum allowed value
+   * @param {number} max - Maximum allowed value
+   * @returns {number} Validated number
+   * @private
+   */
+  _validateNumber(value, defaultValue, min, max) {
+    if (typeof value !== "number" || isNaN(value)) {
+      return defaultValue
+    }
+    return Math.max(min, Math.min(max, value))
   }
 
   /**
@@ -167,102 +197,105 @@ export class MagnifyingGlass {
    * @private
    */
   _performUpdate(event) {
-    // 使用 SVG 标准的坐标转换方法，代替 getBoundingClientRect()
-    const pt = this.svg.createSVGPoint()
-    pt.x = event.clientX
-    pt.y = event.clientY
-
-    let svgP
     try {
-      // 转换为 SVG 坐标（考虑 SVG 内部所有变换）
-      const ctm = this.svg.getScreenCTM()
-      if (!ctm || !ctm.inverse) {
-        // 如果 getScreenCTM() 失败，退回到简单方法
+      // 使用 SVG 标准的坐标转换方法，代替 getBoundingClientRect()
+      const pt = this.svg.createSVGPoint()
+      pt.x = event.clientX
+      pt.y = event.clientY
+
+      let svgP
+      try {
+        // 转换为 SVG 坐标（考虑 SVG 内部所有变换）
+        const ctm = this.svg.getScreenCTM()
+        if (!ctm || !ctm.inverse) {
+          // 如果 getScreenCTM() 失败，退回到简单方法
+          const rect = this.svg.getBoundingClientRect()
+          svgP = {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top,
+          }
+        } else {
+          svgP = pt.matrixTransform(ctm.inverse())
+        }
+      } catch (e) {
+        // 容错处理
         const rect = this.svg.getBoundingClientRect()
         svgP = {
           x: event.clientX - rect.left,
           y: event.clientY - rect.top,
         }
-      } else {
-        svgP = pt.matrixTransform(ctm.inverse())
       }
-    } catch (e) {
-      // 容错处理
-      const rect = this.svg.getBoundingClientRect()
-      svgP = {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-      }
+
+      // 调整放大镜位置，使其在鼠标上方，靠近下方边缘外侧
+      // 偏移量：向下一点，让鼠标位于放大镜底部边缘外侧
+      const offsetX = 0
+      const offsetY = this.radius + MagnifyingGlass.LENS_OFFSET // 放大镜半径 + 偏移量
+
+      const lensX = svgP.x + offsetX
+      const lensY = svgP.y - offsetY // 向上偏移
+
+      // Move lens group to adjusted position
+      this.lensGroup.attr("transform", `translate(${lensX}, ${lensY})`)
+
+      // 计算相对于 lensGroup 的坐标
+      const relativeCX = svgP.x - lensX
+      const relativeCY = svgP.y - lensY
+
+      // Move clipPath circle to relative position within lensGroup
+      d3.select(`#${this.clipPathId} circle`).attr("cx", relativeCX).attr("cy", relativeCY)
+
+      // Move lens border circle to adjusted position relative to lens group
+      this.lensGroup.select(".lens-border").attr("cx", relativeCX).attr("cy", relativeCY)
+
+      // Update magnified content with absolute coordinates
+      this._updateContent(svgP.x, svgP.y)
+    } catch (error) {
+      this._log("Error in _performUpdate:", error)
+      // 发生错误时停用放大镜，避免持续出错
+      this.deactivate()
     }
-
-    // 调整放大镜位置，使其在鼠标上方，靠近下方边缘外侧
-    // 偏移量：向下一点，让鼠标位于放大镜底部边缘外侧
-    const offsetX = 0
-    const offsetY = this.radius + MagnifyingGlass.LENS_OFFSET // 放大镜半径 + 偏移量
-
-    const lensX = svgP.x + offsetX
-    const lensY = svgP.y - offsetY // 向上偏移
-
-    // Move lens group to adjusted position
-    this.lensGroup.attr("transform", `translate(${lensX}, ${lensY})`)
-
-    // 计算相对于 lensGroup 的坐标
-    const relativeCX = svgP.x - lensX
-    const relativeCY = svgP.y - lensY
-
-    // Move clipPath circle to relative position within lensGroup
-    d3.select(`#${this.clipPathId} circle`).attr("cx", relativeCX).attr("cy", relativeCY)
-
-    // Move lens border circle to adjusted position relative to lens group
-    this.lensGroup.select(".lens-border").attr("cx", relativeCX).attr("cy", relativeCY)
-
-    // Update magnified content with absolute coordinates
-    this._updateContent(svgP.x, svgP.y)
   }
 
   /**
    * Update the magnified content
+   * @param {number} absoluteX - Absolute X coordinate in SVG space
+   * @param {number} absoluteY - Absolute Y coordinate in SVG space
    * @private
    */
-  _updateContent(x, y) {
+  _updateContent(absoluteX, absoluteY) {
     // Use D3 selection (don't convert to DOM node)
     const mainGroup = d3.select(this.svg).select("g")
     if (mainGroup.empty()) return
 
-    // 移除节流，确保内容实时更新
-    this.lensContent.html("")
-
-    // Clone main graph content using D3's clone method
-    const clonedContent = mainGroup.clone(true).node()
-    this.lensContent.node().appendChild(clonedContent)
-
-    // 计算透镜组相对于 SVG 的绝对坐标
-    const lensGroupTransform = this.lensGroup.attr("transform")
-    let lensX = 0,
-      lensY = 0
-    if (lensGroupTransform) {
-      const translateMatch = lensGroupTransform.match(/translate\(([^,]+),\s*([^)]+)\)/)
-      if (translateMatch) {
-        lensX = parseFloat(translateMatch[1])
-        lensY = parseFloat(translateMatch[2])
-      }
+    // 只在首次或内容变化时克隆
+    if (!this._cachedContent || this._contentDirty) {
+      this.lensContent.html("")
+      const clonedContent = mainGroup.clone(true).node()
+      this.lensContent.node().appendChild(clonedContent)
+      this._cachedContent = clonedContent
+      this._contentDirty = false
+      this._log("Content cloned and cached")
     }
 
-    // 计算鼠标在 SVG 坐标系中的绝对坐标（正确的计算方式）
-    const absoluteX = lensX + x
-    const absoluteY = lensY + y
+    // 只更新 transform
+    this._updateTransform(absoluteX, absoluteY)
+  }
 
-    // Apply correct transform: 基于 SVG 坐标系，将内容居中到鼠标位置然后缩放
+  /**
+   * Update the transform of lens content
+   * @param {number} absoluteX - Absolute X coordinate in SVG space
+   * @param {number} absoluteY - Absolute Y coordinate in SVG space
+   * @private
+   */
+  _updateTransform(absoluteX, absoluteY) {
     const scale = this.magnification
     const offsetY = this.radius + MagnifyingGlass.LENS_OFFSET
 
     // 正确的公式:
     // tx = -scale * absoluteX (让 absoluteX 变换后对应 x=0)
     // ty = offsetY - scale * absoluteY (让 absoluteY 变换后对应 y=offsetY，即 clipPath 圆心)
-    this.lensContent.attr(
-      "transform",
-      `translate(${-scale * absoluteX}, ${offsetY - scale * absoluteY}) scale(${scale})`
-    )
+    const transform = `translate(${-scale * absoluteX}, ${offsetY - scale * absoluteY}) scale(${scale})`
+    this.lensContent.attr("transform", transform)
 
     this._lastPosition = { x: absoluteX, y: absoluteY }
   }
@@ -273,6 +306,7 @@ export class MagnifyingGlass {
   activate() {
     this._log("Activating magnifier...")
     this.active = true
+    this._contentDirty = true // 标记内容为脏，激活时会重新克隆
     this.lensGroup.style("display", null)
     d3.select(this.svg).classed("magnifier-active", true)
 
@@ -333,8 +367,15 @@ export class MagnifyingGlass {
     this.svg.removeEventListener("mousemove", this._handleMouseMove)
     this.svg.removeEventListener("click", this._handleClick)
 
+    // Clean up DOM elements
     if (this.lensGroup) this.lensGroup.remove()
     const defs = d3.select(this.svg).select("defs")
     if (defs) defs.select(`#${this.clipPathId}`).remove()
+
+    // Clean up references
+    this._cachedContent = null
+    this.lensGroup = null
+    this.lensContent = null
+    this.svg = null
   }
 }
