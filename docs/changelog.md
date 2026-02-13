@@ -207,6 +207,8 @@
     - [x] change double-click highlight color to orange (#FF8C00)
     - [x] set minimum width for schema nodes (100px) to prevent narrow display
 - 0.17.2
+    - [x] enable PWA
+- 0.17.3
     - [ ] 1.show loader name
     - [ ] 2.show relationship list when double click entity in er diagram
     - [ ] 3.highlight entity in use case

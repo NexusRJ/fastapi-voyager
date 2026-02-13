@@ -6,7 +6,7 @@ This module provides the Litestar-specific implementation of the voyager server.
 from typing import Any
 
 from fastapi_voyager.adapters.base import VoyagerAdapter
-from fastapi_voyager.adapters.common import STATIC_FILES_PATH, WEB_DIR, VoyagerContext
+from fastapi_voyager.adapters.common import STATIC_FILES_PATH, VOYAGER_PATH_PLACEHOLDER, WEB_DIR, VoyagerContext
 from fastapi_voyager.type import CoreData, SchemaNode, Tag
 
 
@@ -101,6 +101,17 @@ class LitestarAdapter(VoyagerAdapter):
         async def index() -> str:
             return self.ctx.get_index_html()
 
+        @get("/sw.js", media_type="application/javascript")
+        async def get_service_worker() -> str:
+            """Serve the Service Worker."""
+            return self.ctx.get_service_worker()
+
+        @get("/manifest.webmanifest", media_type="application/manifest+json")
+        async def get_manifest() -> str:
+            """Serve the PWA manifest."""
+            content = self.ctx.get_manifest()
+            return content.replace(VOYAGER_PATH_PLACEHOLDER, "./")
+
         @post("/source")
         async def get_object_by_module_name(request: Request) -> dict:
             payload = await request.json()
@@ -143,6 +154,8 @@ class LitestarAdapter(VoyagerAdapter):
                 get_filtered_dot_core_data,
                 render_dot_from_core_data,
                 index,
+                get_service_worker,
+                get_manifest,
                 get_object_by_module_name,
                 get_vscode_link_by_module_name,
                 static_files_router,

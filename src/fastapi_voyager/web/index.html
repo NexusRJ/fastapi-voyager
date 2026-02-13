@@ -1,7 +1,11 @@
 <html>
   <head>
     <title>FastAPI Voyager</title>
+    <meta name="description" content="Visualize API routing tree and dependencies" />
     <meta name="theme-color" content="#ffffff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Voyager" />
     <link
       rel="stylesheet"
       href="<!-- STATIC_PATH -->/graphviz.svg.css<!-- VERSION_PLACEHOLDER -->"
@@ -26,7 +30,7 @@
       href="<!-- STATIC_PATH -->/icon/favicon-16x16.png"
     />
     <link rel="icon" href="<!-- STATIC_PATH -->/icon/favicon.ico" sizes="any" />
-    <link rel="manifest" href="<!-- STATIC_PATH -->/icon/site.webmanifest" />
+    <link rel="manifest" href="./manifest.webmanifest" />
     <link
       href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900|Material+Icons"
       rel="stylesheet"
@@ -653,6 +657,18 @@
       src="<!-- STATIC_PATH -->/vue-main.js<!-- VERSION_PLACEHOLDER -->"
     ></script>
 
+    <!-- Service Worker Registration -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          // Use relative path to work with any mount point (e.g., /voyager/sw.js)
+          navigator.serviceWorker
+            .register("./sw.js")
+            .then((reg) => console.log("[Voyager] SW registered:", reg.scope))
+            .catch((err) => console.log("[Voyager] SW registration failed:", err))
+        })
+      }
+    </script>
     <!-- GA_SNIPPET -->
   </body>
 </html>

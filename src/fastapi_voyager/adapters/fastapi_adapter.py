@@ -8,7 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from fastapi_voyager.adapters.base import VoyagerAdapter
-from fastapi_voyager.adapters.common import STATIC_FILES_PATH, VoyagerContext
+from fastapi_voyager.adapters.common import STATIC_FILES_PATH, VOYAGER_PATH_PLACEHOLDER, VoyagerContext
 from fastapi_voyager.type import CoreData, SchemaNode, Tag
 
 
@@ -136,6 +136,27 @@ class FastAPIAdapter(VoyagerAdapter):
         @router.get("/", response_class=HTMLResponse)
         def index() -> str:
             return self.ctx.get_index_html()
+
+        @router.get("/sw.js")
+        def get_service_worker():
+            """Serve the Service Worker with correct content type."""
+            from fastapi.responses import PlainTextResponse
+            return PlainTextResponse(
+                content=self.ctx.get_service_worker(),
+                media_type="application/javascript"
+            )
+
+        @router.get("/manifest.webmanifest")
+        def get_manifest():
+            """Serve the PWA manifest with correct content type."""
+            from fastapi.responses import PlainTextResponse
+            content = self.ctx.get_manifest()
+            # Replace VOYAGER_PATH with root-relative path (works for any mount point)
+            content = content.replace(VOYAGER_PATH_PLACEHOLDER, "./")
+            return PlainTextResponse(
+                content=content,
+                media_type="application/manifest+json"
+            )
 
         @router.post("/source")
         def get_object_by_module_name(payload: SourcePayload) -> JSONResponse:

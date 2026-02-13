@@ -9,7 +9,7 @@ import mimetypes
 from typing import Any
 
 from fastapi_voyager.adapters.base import VoyagerAdapter
-from fastapi_voyager.adapters.common import STATIC_FILES_PATH, WEB_DIR, VoyagerContext
+from fastapi_voyager.adapters.common import STATIC_FILES_PATH, VOYAGER_PATH_PLACEHOLDER, WEB_DIR, VoyagerContext
 from fastapi_voyager.type import CoreData, SchemaNode, Tag
 
 
@@ -71,6 +71,10 @@ class DjangoNinjaAdapter(VoyagerAdapter):
         # Route the request
         if method == "GET" and path == "/":
             await self._handle_index(send)
+        elif method == "GET" and path == "/sw.js":
+            await self._handle_service_worker(send)
+        elif method == "GET" and path == "/manifest.webmanifest":
+            await self._handle_manifest(send)
         elif method == "GET" and path == "/dot":
             await self._handle_get_dot(send)
         elif method == "POST" and path == "/er-diagram":
@@ -147,6 +151,25 @@ class DjangoNinjaAdapter(VoyagerAdapter):
         """Handle GET / - return the index HTML."""
         html = self.ctx.get_index_html()
         await self._send_html(html, send)
+
+    async def _handle_service_worker(self, send):
+        """Handle GET /sw.js - return the Service Worker."""
+        sw_content = self.ctx.get_service_worker()
+        await self._send_response(
+            "application/javascript",
+            sw_content.encode("utf-8"),
+            send,
+        )
+
+    async def _handle_manifest(self, send):
+        """Handle GET /manifest.webmanifest - return the PWA manifest."""
+        content = self.ctx.get_manifest()
+        content = content.replace(VOYAGER_PATH_PLACEHOLDER, "./")
+        await self._send_response(
+            "application/manifest+json",
+            content.encode("utf-8"),
+            send,
+        )
 
     async def _handle_get_dot(self, send):
         """Handle GET /dot - return options and initial dot graph."""

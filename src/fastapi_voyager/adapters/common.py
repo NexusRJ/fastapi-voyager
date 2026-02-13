@@ -26,6 +26,7 @@ GA_PLACEHOLDER = "<!-- GA_SNIPPET -->"
 VERSION_PLACEHOLDER = "<!-- VERSION_PLACEHOLDER -->"
 STATIC_PATH_PLACEHOLDER = "<!-- STATIC_PATH -->"
 THEME_COLOR_PLACEHOLDER = "<!-- THEME_COLOR -->"
+VOYAGER_PATH_PLACEHOLDER = "<!-- VOYAGER_PATH -->"
 
 
 def build_ga_snippet(ga_id: str | None) -> str:
@@ -297,3 +298,24 @@ class VoyagerContext:
             return {"error": f"Class not found: {e}"}
         except Exception as e:
             return {"error": f"Internal error: {str(e)}"}
+
+    def get_service_worker(self) -> str:
+        """Get the Service Worker JavaScript content with placeholders replaced."""
+        sw_file = WEB_DIR / "sw.js"
+        if sw_file.exists():
+            content = sw_file.read_text(encoding="utf-8")
+            content = content.replace(VERSION_PLACEHOLDER, __version__)
+            content = content.replace(STATIC_PATH_PLACEHOLDER, STATIC_FILES_PATH.lstrip("/"))
+            return content
+        return ""
+
+    def get_manifest(self) -> str:
+        """Get the PWA manifest JSON content with placeholders replaced."""
+        manifest_file = WEB_DIR / "icon" / "site.webmanifest"
+        if manifest_file.exists():
+            content = manifest_file.read_text(encoding="utf-8")
+            # VOYAGER_PATH will be replaced with the voyager mount path (e.g., "/voyager/")
+            # This is set by adapters based on how they are mounted
+            content = content.replace(THEME_COLOR_PLACEHOLDER, self._get_theme_color())
+            return content
+        return "{}"
