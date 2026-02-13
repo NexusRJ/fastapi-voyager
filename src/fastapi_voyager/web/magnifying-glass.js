@@ -216,8 +216,8 @@ export class MagnifyingGlass {
     // Move lens border circle to adjusted position relative to lens group
     this.lensGroup.select(".lens-border").attr("cx", relativeCX).attr("cy", relativeCY)
 
-    // Update magnified content with relative coordinates
-    this._updateContent(relativeCX, relativeCY)
+    // Update magnified content with absolute coordinates
+    this._updateContent(svgP.x, svgP.y)
   }
 
   /**
@@ -254,7 +254,7 @@ export class MagnifyingGlass {
 
     // Apply correct transform: 基于 SVG 坐标系，将内容居中到鼠标位置然后缩放
     const scale = this.magnification
-    const offsetY = this.radius + 10
+    const offsetY = this.radius + MagnifyingGlass.LENS_OFFSET
 
     // 正确的公式:
     // tx = -scale * absoluteX (让 absoluteX 变换后对应 x=0)
