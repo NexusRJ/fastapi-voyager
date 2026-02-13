@@ -3,7 +3,7 @@ export class GraphUI {
   // Constants
   // ====================
 
-  static HIGHLIGHT_COLOR = "#822dba"
+  static HIGHLIGHT_COLOR = "#FF8C00"
   static HIGHLIGHT_STROKE_WIDTH = "3.0"
 
   // ====================
