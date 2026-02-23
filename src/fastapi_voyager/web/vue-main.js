@@ -61,6 +61,7 @@ const app = createApp({
         resetCb: () => {
           store.actions.resetDetailPanels()
         },
+        magnifyingGlassMagnification: store.state.filter.magnification,
       })
     }
 

@@ -6,24 +6,53 @@
  *
  * Usage:
  *   const magnifier = new MagnifyingGlass(svgElement, {
- *     magnification: 2.0,
- *     radius: 120
+ *     magnification: 2.0
  *   })
+ *
+ * The lens radius is automatically calculated based on viewBox width.
  */
 
 export class MagnifyingGlass {
   // Class constants
   static DEFAULT_MAGNIFICATION = 2.0
-  static DEFAULT_RADIUS = 100
+  static RADIUS_PERCENTAGE = 0.2 // Percentage of viewBox width
   static LENS_OFFSET = 10 // 放大镜相对于鼠标的偏移量
   static BORDER_WIDTH = 2 // 边框宽度
   static UPDATE_THROTTLE_MS = 16 // 更新节流（约60fps）
 
   /**
+   * Extract viewBox dimensions from SVG element (called dynamically each time)
+   * @private
+   */
+  _getViewBoxDimensions() {
+    const viewBoxAttr = this.svg.getAttribute("viewBox")
+    if (viewBoxAttr) {
+      const parts = viewBoxAttr.trim().split(/\s+/)
+      if (parts.length === 4) {
+        const [, , width, height] = parts.map(parseFloat)
+        if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
+          return { width, height }
+        }
+      }
+    }
+    // Fallback to getBoundingClientRect if no viewBox
+    const rect = this.svg.getBoundingClientRect()
+    return { width: rect.width || 1000, height: rect.height || 1000 }
+  }
+
+  /**
+   * Get current radius (dynamically calculated based on current viewBox width)
+   * @returns {number} Radius in SVG units
+   */
+  get radius() {
+    const { width } = this._getViewBoxDimensions()
+    return Math.round(width * MagnifyingGlass.RADIUS_PERCENTAGE)
+  }
+
+  /**
    * @param {SVGElement} svgElement - The SVG element to magnify
    * @param {Object} options - Configuration options
    * @param {number} options.magnification - Zoom level (default: 2.0)
-   * @param {number} options.radius - Lens radius in pixels (default: 100)
    * @param {boolean} options.debug - Enable debug logging (default: false)
    */
   constructor(svgElement, options = {}) {
@@ -33,13 +62,15 @@ export class MagnifyingGlass {
     }
 
     this.svg = svgElement
+
+    // Calculate magnification
     this._magnification = this._validateNumber(
       options.magnification,
       MagnifyingGlass.DEFAULT_MAGNIFICATION,
       0.1,
       10
     )
-    this.radius = this._validateNumber(options.radius, MagnifyingGlass.DEFAULT_RADIUS, 10, 500)
+
     this.debug = options.debug || false
     this.active = false
 
@@ -250,10 +281,13 @@ export class MagnifyingGlass {
         }
       }
 
+      // Get current radius (dynamically calculated from viewBox)
+      const currentRadius = this.radius
+
       // 调整放大镜位置，使其在鼠标上方，靠近下方边缘外侧
       // 偏移量：向下一点，让鼠标位于放大镜底部边缘外侧
       const offsetX = 0
-      const offsetY = this.radius + MagnifyingGlass.LENS_OFFSET // 放大镜半径 + 偏移量
+      const offsetY = currentRadius + MagnifyingGlass.LENS_OFFSET // 放大镜半径 + 偏移量
 
       const lensX = svgP.x + offsetX
       const lensY = svgP.y - offsetY // 向上偏移
@@ -265,11 +299,18 @@ export class MagnifyingGlass {
       const relativeCX = svgP.x - lensX
       const relativeCY = svgP.y - lensY
 
-      // Move clipPath circle to relative position within lensGroup
-      d3.select(`#${this.clipPathId} circle`).attr("cx", relativeCX).attr("cy", relativeCY)
+      // Update clipPath circle radius and position (radius is dynamic now)
+      d3.select(`#${this.clipPathId} circle`)
+        .attr("r", currentRadius)
+        .attr("cx", relativeCX)
+        .attr("cy", relativeCY)
 
-      // Move lens border circle to adjusted position relative to lens group
-      this.lensGroup.select(".lens-border").attr("cx", relativeCX).attr("cy", relativeCY)
+      // Update lens border circle radius and position
+      this.lensGroup
+        .select(".lens-border")
+        .attr("r", currentRadius + MagnifyingGlass.BORDER_WIDTH)
+        .attr("cx", relativeCX)
+        .attr("cy", relativeCY)
 
       // Update magnified content with absolute coordinates
       this._updateContent(svgP.x, svgP.y)
@@ -313,7 +354,8 @@ export class MagnifyingGlass {
    */
   _updateTransform(absoluteX, absoluteY) {
     const scale = this.magnification
-    const offsetY = this.radius + MagnifyingGlass.LENS_OFFSET
+    const currentRadius = this.radius
+    const offsetY = currentRadius + MagnifyingGlass.LENS_OFFSET
 
     // 正确的公式:
     // tx = -scale * absoluteX (让 absoluteX 变换后对应 x=0)

@@ -18,6 +18,10 @@ export class GraphUI {
     this.gv = null
     this.currentSelection = []
     this.magnifyingGlass = null
+
+    // Magnifying glass magnification setting (radius is percentage of viewBox width)
+    this._magnification = options.magnifyingGlassMagnification || 3.0
+
     this._init()
   }
 
@@ -172,8 +176,7 @@ export class GraphUI {
           .then((module) => {
             const { MagnifyingGlass } = module
             this.magnifyingGlass = new MagnifyingGlass(svgElement, {
-              magnification: 3.0,
-              radius: 400,
+              magnification: this._magnification,
             })
           })
           .catch((err) => {
